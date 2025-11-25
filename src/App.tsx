@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// src/App.tsx
+
+import { Routes, Route } from "react-router-dom";
 import Box from "@mui/material/Box";
 
 import ParteienPage from "./pages/ParteienPage";
@@ -6,19 +8,16 @@ import KandidatenPage from "./pages/KandidatenPage";
 import FavoritenPage from "./pages/FavoritenPage";
 import WahllokalePage from "./pages/WahllokalePage";
 import WahlterminePage from "./pages/WahlterminePage";
-
-import { NavigationBar } from "./components/NavigationBar";
-import { TopBar } from "./components/TopBar";
 import SettingsPage from "./pages/SettingsPage";
-import { useEffect } from "react";
 import LandingPage from "./pages/LandingPage";
 
-interface AppProps {
-  darkMode: boolean;
-  toggleTheme: () => void;
-}
+import { TopBar } from "./components/TopBar";
+import { NavigationBar } from "./components/NavigationBar";
 
-export default function App({ darkMode, toggleTheme }: AppProps) {
+import { useEffect } from "react";
+
+export default function App() {
+  // Browser-Push Notifications
   useEffect(() => {
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -26,8 +25,8 @@ export default function App({ darkMode, toggleTheme }: AppProps) {
   }, []);
 
   return (
-    <BrowserRouter>
-      <TopBar darkMode={darkMode} onToggleTheme={toggleTheme} />
+    <>
+      <TopBar />
 
       <Box sx={{ pt: 8, pb: 8 }}>
         <Routes>
@@ -42,6 +41,6 @@ export default function App({ darkMode, toggleTheme }: AppProps) {
       </Box>
 
       <NavigationBar />
-    </BrowserRouter>
+    </>
   );
 }

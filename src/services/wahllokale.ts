@@ -20,7 +20,10 @@ export async function sucheWahllokale(params: {
   if (params.lng !== undefined) query.append("lng", String(params.lng));
   if (params.adresse !== undefined) query.append("adresse", params.adresse);
 
-  const apiData = await apiGet<WahllokalApi[]>(`/wahllokale?...`);
+  const queryString = query.toString();
+  const path = queryString ? `/wahllokale?${queryString}` : "/wahllokale";
+
+  const apiData = await apiGet<WahllokalApi[]>(path);
 
   return apiData.map(mapWahllokal).filter((wl): wl is Wahllokal => wl !== null);
 }

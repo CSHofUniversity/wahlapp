@@ -7,5 +7,5 @@ export interface Termin {
   typ: TerminTyp;
   datum_iso: string;
   beschreibung?: string;
-  status?: string;
+  status?: TerminStatus;
 }

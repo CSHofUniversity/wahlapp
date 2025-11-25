@@ -1,7 +1,10 @@
+// src/util/icsDownload.ts
+
 /**
  * Erstellt eine ICS-Datei für einen Termin
  * und triggert den Download im Browser.
  */
+
 export function downloadICS({
   title,
   description,

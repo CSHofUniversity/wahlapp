@@ -43,11 +43,3 @@ export function removeNotification(id: string) {
 export function clearAllNotifications() {
   localStorage.removeItem(STORAGE_KEY);
 }
-
-export function isRegistered(id: string): boolean {
-  return loadNotifications().some((n) => n.id === id);
-}
-
-export function getNotification(id: string): NotificationEntry | undefined {
-  return loadNotifications().find((n) => n.id === id);
-}

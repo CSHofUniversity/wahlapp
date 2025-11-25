@@ -3,7 +3,7 @@ import Dexie, { type Table } from "dexie";
 import type { Favorit } from "../types/favorit";
 import type { Termin } from "../types/termin";
 
-export class WahlInfoDB extends Dexie {
+class WahlInfoDB extends Dexie {
   favoriten!: Table<Favorit, string>;
   termine!: Table<Termin, string>;
 
@@ -12,7 +12,7 @@ export class WahlInfoDB extends Dexie {
 
     this.version(1).stores({
       favoriten: "id, kandidatId, erstelltAm",
-      termine: "id, datumISO, typ, status"
+      termine: "id, datum_iso, typ, status",
     });
   }
 }

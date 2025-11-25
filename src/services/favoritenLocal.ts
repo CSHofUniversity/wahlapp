@@ -56,26 +56,18 @@ export async function updateFavorit(
   }
 }
 
-// Favorit prüfen (SYNCHRON)
-export function isFavoritSync(id: string): boolean {
-  return getFavoriten().some((x) => x.id === id);
-}
-
-// Favorit prüfen (ASYNC)
-export async function isFavorit(id: string): Promise<boolean> {
-  return isFavoritSync(id);
-}
-
 // Details laden
 export async function loadFavoritenDetails(
   kandidaten: Kandidat[]
 ): Promise<(Kandidat & { notiz: string })[]> {
   const favs = getFavoriten();
+  const map = new Map(favs.map((f) => [f.id, f.notiz ?? ""]));
+
   return kandidaten
-    .filter((k) => favs.some((f) => f.id === k.id))
+    .filter((k) => map.has(k.id))
     .map((k) => ({
       ...k,
-      notiz: favs.find((f) => f.id === k.id)?.notiz ?? "",
+      notiz: map.get(k.id) ?? "",
     }));
 }
 

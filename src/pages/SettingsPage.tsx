@@ -1,54 +1,97 @@
-import Container from "@mui/material/Container";
+// src/pages/SettingsPage.tsx
+// Refaktorisierte Version – konsistent mit dem PageLayout-System
+
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
-
-import { useTheme } from "@mui/material/styles";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 
 import SettingsIcon from "@mui/icons-material/Settings";
-import { PageHeader } from "../components/PageHeader";
-import { PageTransition } from "../components/PageTransition";
+import { PageLayout } from "../components/PageLayout";
+import { useSettingsTheme } from "../hooks/useSettingsTheme";
+
+/* ------------------------------------------------------------------ */
+/* Hauptkomponente                                                    */
+/* ------------------------------------------------------------------ */
 
 export default function SettingsPage() {
-  const theme = useTheme();
-  const darkMode = theme.palette.mode === "dark";
+  const { darkMode, toggleTheme } = useSettingsTheme();
+  const { reloadApp } = usePwaActions();
 
   return (
-    <PageTransition>
-      <PageHeader
-        icon={<SettingsIcon />}
-        title="Einstellungen"
-        subtitle="Informationen und Einstellungen zu der App."
-      />
-      <Container sx={{ mt: 2, mb: 10 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}></Typography>
+    <PageLayout
+      icon={<SettingsIcon />}
+      title="Einstellungen"
+      subtitle="Theme, App-Informationen & PWA-Funktionen."
+    >
+      <Stack spacing={3}>
+        {/* Darstellung */}
+        <Section title="Darstellung">
+          <FormControlLabel
+            control={<Switch checked={darkMode} onChange={toggleTheme} />}
+            label={`Dark-Mode: ${darkMode ? "aktiv" : "deaktiviert"}`}
+          />
+        </Section>
 
-        <Stack spacing={2}>
-          <Typography variant="h6">Darstellung</Typography>
-          <Typography>
-            Aktuelles Theme: <b>{darkMode ? "Dunkel" : "Hell"}</b>
-          </Typography>
+        <Divider />
 
-          <Divider />
-
-          <Typography variant="h6">App-Informationen</Typography>
+        {/* App-Infos */}
+        <Section title="App-Informationen">
           <Typography>Wahl-Info & Wahllokalfinder</Typography>
           <Typography>Version: 1.0.0</Typography>
+        </Section>
 
-          <Divider />
+        <Divider />
 
-          <Typography variant="h6">PWA</Typography>
+        {/* PWA */}
+        <Section title="PWA">
           <Typography>
-            Diese App kann auf dem Homescreen installiert und offline verwendet
+            Diese App kann auf dem Homescreen installiert und offline genutzt
             werden.
           </Typography>
 
-          <Button variant="outlined" onClick={() => window.location.reload()}>
+          <Button variant="outlined" onClick={reloadApp}>
             App neu laden
           </Button>
-        </Stack>
-      </Container>
-    </PageTransition>
+        </Section>
+      </Stack>
+    </PageLayout>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Präsentationskomponente: Section                                   */
+/* ------------------------------------------------------------------ */
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Stack spacing={1}>
+      <Typography variant="h6">{title}</Typography>
+      {children}
+    </Stack>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Hooks                                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * PWA-Utilities – später erweiterbar (z. B. install prompt, update available)
+ */
+
+export function usePwaActions() {
+  function reloadApp() {
+    window.location.reload();
+  }
+
+  return { reloadApp };
 }

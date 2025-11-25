@@ -1,89 +1,119 @@
-# React + TypeScript + Vite
-npm run preview für localhost Port 4173
+# Wahl-Info & Wahllokalfinder (PWA)
 
-# Vite für PWA bereit machen
- mit dem npm Paket vite-plugin-pwa ist die App installierbar, offline-fähig, app-mäßig (standalone).
+Eine Progressive Web App (PWA) zur kommunalen Wahl-Information für den Wahlkreis Hof.  
+Die App bietet kompakte Infos zu Parteien, Kandidaten, Wahllokalen und wichtigen Wahlterminen – inkl. Favoritenverwaltung, persönlichen Wahlterminen und Erinnerungsfunktionen.
 
-# Grundstrucktur im Projekt:
-/src
-  /api              → REST-Client für deine AWS/Mock-API
-  /components       → UI-Elemente
-  /pages            → Screens
-  /hooks            → GPS, Queries, Theme
-  /data            → IndexedDB für Favoriten & Termine
-  /types            → TypeScript-Interfaces aus OpenAPI
-  App.tsx
-  main.tsx
-/public
-  manifest.webmanifest
-  service-worker.js (wird von PWA Plugin generiert)
+## Features
 
-## REST-API und AWS
+- **Parteien-Übersicht**
 
-PWA (React, Vite)
-     ↓ (HTTPS)
-AWS API Gateway  →  AWS Lambda-Funktionen  →  AWS RDS (PostgreSQL)
-                          ↑
-                Secrets Manager (Zugangsdaten)
+  - Liste aller relevanten Parteien mit Kurzbezeichnung, Farbe und Programm.
+  - Sortierbar nach Name, Kurzbezeichnung oder Farbe.
+  - Direkter Absprung zur Kandidaten-Übersicht einer Partei.
 
+- **Kandidaten-Übersicht**
 
-## Expanding the ESLint configuration
+  - Filterbare Liste aller Kandidaten (Name, Wahlkreis, Partei).
+  - Filter nach:
+    - Name oder Wahlkreis (Volltextsuche)
+    - Partei
+    - Wahlkreis
+    - Nur Favoriten
+  - Detailansicht mit Biografie & Agenda (ausklappbar).
+  - Portrait-Anzeige mit Bildvergrößerung (Lightbox).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Favoriten-Verwaltung**
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+  - Kandidaten als Favoriten markieren.
+  - Pro Favorit eine persönliche Notiz hinterlegen.
+  - Favoriten nach Partei gruppiert.
+  - Schutz: Favoriten mit Notiz können nicht versehentlich gelöscht werden.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **Wahllokalfinder**
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+  - Ermittelt das eigene Wahllokal anhand des aktuellen Standorts (GPS) oder einer eingegebenen Adresse (Geocoding via Geoapify).
+  - Darstellung:
+    - Kartenansicht (Leaflet) mit allen Wahllokalen.
+    - Liste der Wahllokale, sortiert nach Entfernung.
+  - Funktionen:
+    - Sortierung (nächstes zuerst / weitestes zuerst)
+    - Klick auf Eintrag zeigt Wahllokal auf der Karte
+    - Anzeige von Adresse, Entfernung und Barrierefreiheit.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+- **Wahltermine & Erinnerungen**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+  - Offizielle Wahltermine (Server, AWS/Postgres) + persönliche Termine (lokal).
+  - Filter nach Typ (Wahl, Briefwahl, Fristen, Infos, eigene Termine).
+  - Export von Terminen als `.ics` (Kalenderdateien).
+  - Browser-Notifications:
+    - Lokale Speicherung von Erinnerungseinstellungen (Lead Time in Minuten).
+    - Aktivier-/Deaktivierbare Erinnerungen pro Termin.
+    - Button zum Deaktivieren aller Erinnerungen.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **Settings / Theme**
+
+  - Umschaltbarer Light-/Dark-Mode, persistent via `localStorage`.
+  - Anzeige von App-Informationen.
+  - Button zum „App neu laden“.
+
+- **PWA-Eigenschaften**
+  - Als PWA installierbar (Homescreen).
+  - Nutzbar im Standalone-Modus (app-ähnliche Darstellung).
+  - Offline-Fähigkeit für:
+    - Favoriten
+    - persönliche Wahltermine
+  - Optionaler Service Worker / Caching (abhängig von Vite-PWA-Konfiguration).
+
+---
+
+## Tech-Stack
+
+- **Frontend**
+
+  - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+  - [Vite](https://vitejs.dev/) als Build-Tool
+  - [MUI](https://mui.com/) (Material UI) als UI-Framework
+  - [React Router](https://reactrouter.com/) für Routing
+  - [Day.js](https://day.js.org/) + MUI X DatePicker für Datumauswahl
+  - [Leaflet](https://leafletjs.com/) + `react-leaflet` für Karten
+  - `leaflet-routing-machine` für Routing-Anzeige
+
+- **Backend / APIs**
+
+  - REST-API über AWS API Gateway + Lambda + RDS (PostgreSQL)
+  - Endpoints (Beispiele):
+    - `GET /parteien`
+    - `GET /kandidaten`
+    - `GET /wahllokale`
+    - `GET /wahltermine`
+  - Geocoding: [Geoapify Geocoding API](https://www.geoapify.com/)
+
+- **Lokale Persistenz**
+  - `localStorage` für:
+    - Favoriten (`favoritenLocal.ts`)
+    - Notification-Einstellungen (`notificationsLocal.ts`)
+    - Persönliche Termine (`userTermineLocal.ts`)
+    - Theme-Mode (`ThemeContext.tsx`)
+
+---
+
+## Projektstruktur
+
+```text
+src/
+  components/       # Wiederverwendbare UI-Komponenten (Cards, Map, Lightbox, etc.)
+  pages/            # Seiten (Parteien, Kandidaten, Favoriten, Wahllokale, Wahltermine, Settings, Landing)
+  hooks/            # Custom Hooks (Favoriten, Theme, Wahllokale-Controller)
+  services/         # API-HTTP-Client, Geoapify, lokale Services (Favoriten, Termine, Notifications)
+  context/          # React Contexts (Favoriten, Notifications, Theme)
+  data/             # Mapper & ggf. zusätzliche Daten-Helper
+  types/            # TypeScript-Typen für API-Responses und Domänenobjekte
+  util/             # Kleine Hilfsfunktionen (ICS, GitHub-RAW-URLs, Distanzberechnung, Datum)
+  App.tsx           # Routing & Layout (TopBar, Bottom Navigation, PageLayout)
+  main.tsx          # Einstiegspunkt, Context-Provider, ThemeProvider, Router
+  theme.ts          # Zentrales Theme (Light/Dark) für MUI
+public/
+  icons/            # PWA-Icons
+  sw.js             # (optional genutzter) Service Worker
+  ...
 ```

@@ -1,61 +1,58 @@
 // src/components/NavigationBar.tsx
-
 import BottomNavigation from "@mui/material/BottomNavigation";
 import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
+import Badge from "@mui/material/Badge";
+
 import { useNavigate, useLocation } from "react-router-dom";
+import { useFavoritenContext } from "../context/FavoritenContext";
+import { useNotificationContext } from "../context/NotificationContext";
 
 import PolicyIcon from "@mui/icons-material/Policy";
 import PeopleIcon from "@mui/icons-material/People";
 import StarIcon from "@mui/icons-material/Star";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import EventIcon from "@mui/icons-material/Event";
-
-import { useFavoritenContext } from "../context/FavoritenContext";
-import { useNotificationContext } from "../context/NotificationContext";
-
 import type { JSX } from "react";
-import Badge from "@mui/material/Badge";
+
+interface NavTab {
+  path: string;
+  label: string;
+  icon: JSX.Element;
+}
+
+const TABS: NavTab[] = [
+  { path: "/parteien", label: "Parteien", icon: <PolicyIcon /> },
+  { path: "/kandidaten", label: "Kandidaten", icon: <PeopleIcon /> },
+  { path: "/favoriten", label: "Favoriten", icon: <StarIcon /> },
+  { path: "/wahllokale", label: "Wahllokale", icon: <LocationOnIcon /> },
+  { path: "/wahltermine", label: "Termine", icon: <EventIcon /> },
+];
 
 export function NavigationBar() {
-  const nav = useNavigate();
-  const loc = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const { favoriten } = useFavoritenContext();
   const { notifications } = useNotificationContext();
 
-  const TABS = [
-    { path: "/parteien", label: "Parteien", icon: <PolicyIcon /> },
-    { path: "/kandidaten", label: "Kandidaten", icon: <PeopleIcon /> },
-    { path: "/favoriten", label: "Favoriten", icon: <StarIcon /> },
-    { path: "/wahllokale", label: "Wahllokale", icon: <LocationOnIcon /> },
-    { path: "/wahltermine", label: "Termine", icon: <EventIcon /> },
-  ];
-
-  function withOptionalBadge(tabPath: string, icon: JSX.Element) {
-    // Favoriten-Badge
-    if (tabPath === "/favoriten" && favoriten.length > 0) {
+  function withBadge(tab: NavTab) {
+    if (tab.path === "/favoriten" && favoriten.length > 0) {
       return (
-        <Badge
-          badgeContent={favoriten.length}
-          color="secondary"
-          sx={{ mr: 0.5 }}
-        >
-          {icon}
+        <Badge badgeContent={favoriten.length} color="secondary">
+          {tab.icon}
         </Badge>
       );
     }
-    // Wahltermine-Badge (Anzahl aktive Erinnerungen)
-    if (tabPath === "/wahltermine" && notifications.length > 0) {
+    if (tab.path === "/wahltermine" && notifications.length > 0) {
       return (
         <Badge badgeContent={notifications.length} color="info">
-          {icon}
+          {tab.icon}
         </Badge>
       );
     }
-
-    return icon;
+    return tab.icon;
   }
 
   return (
@@ -63,7 +60,7 @@ export function NavigationBar() {
       elevation={3}
       square
       sx={{
-        zIndex: "10",
+        zIndex: 10,
         position: "fixed",
         bottom: 0,
         left: 0,
@@ -80,8 +77,8 @@ export function NavigationBar() {
         }}
       >
         <BottomNavigation
-          value={loc.pathname}
-          onChange={(_, value) => nav(value)}
+          value={location.pathname}
+          onChange={(_, value) => navigate(value)}
           showLabels={false}
           sx={{
             display: "flex",
@@ -92,7 +89,7 @@ export function NavigationBar() {
           }}
         >
           {TABS.map((tab) => {
-            const isActive = loc.pathname === tab.path;
+            const isActive = location.pathname.startsWith(tab.path);
 
             return (
               <BottomNavigationAction
@@ -102,7 +99,6 @@ export function NavigationBar() {
                 icon={
                   <Box
                     sx={{
-                      "&.Mui-selected svg": { color: "primary.contrastText" },
                       px: 1.2,
                       py: 0.7,
                       borderRadius: "24px",
@@ -119,7 +115,7 @@ export function NavigationBar() {
                       color: isActive ? "primary.contrastText" : "inherit",
                     }}
                   >
-                    {withOptionalBadge(tab.path, tab.icon)}
+                    {withBadge(tab)}
                     {isActive && (
                       <Box
                         component="span"
@@ -136,10 +132,7 @@ export function NavigationBar() {
                 }
                 sx={{
                   minWidth: 68,
-                  textTransform: "none",
-                  "& .MuiBottomNavigationAction-label": {
-                    display: "none",
-                  },
+                  "& .MuiBottomNavigationAction-label": { display: "none" },
                 }}
               />
             );

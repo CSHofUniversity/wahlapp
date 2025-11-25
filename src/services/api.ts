@@ -1,15 +1,40 @@
 // API Gateway -> APIs -> wahlinfo-api (87k3cdtkfe) -> Stufen
-// const API_BASE = "https://87k3cdtkfe.execute-api.eu-central-1.amazonaws.com/dev";
-
+// API_BASE = "https://87k3cdtkfe.execute-api.eu-central-1.amazonaws.com/dev";
+// API_BASE in die .env ausgelagert
 // src/services/api.ts
 
 export const API_URL = import.meta.env.VITE_API_URL;
+export class ApiError extends Error {
+  status: number;
+  path: string;
+  responseBody?: unknown;
+
+  constructor(status: number, path: string, responseBody?: unknown) {
+    super(`GET ${path} failed with ${status}`);
+    this.status = status;
+    this.path = path;
+    this.responseBody = responseBody;
+  }
+}
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(API_URL + path);
+  let res: Response;
+
+  try {
+    res = await fetch(API_URL + path);
+  } catch (err) {
+    console.error("Network error", err);
+    throw new ApiError(0, path);
+  }
 
   if (!res.ok) {
-    throw new Error(`GET ${path} failed with ${res.status}`);
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      // ignore parse errors
+    }
+    throw new ApiError(res.status, path, body);
   }
 
   const json = await res.json();

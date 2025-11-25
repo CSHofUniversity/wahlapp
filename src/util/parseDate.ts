@@ -1,14 +1,4 @@
-/**
- * Parses various date formats into a JS Date object.
- *
- * Supported formats:
- * - "2025-03-12"
- * - "2025-03-12T00:00:00Z"
- * - "2025/03/12"
- * - "12.03.2025" (dd.mm.yyyy)
- *
- * Returns null if parsing fails.
- */
+// src/util/parseDate.ts
 
 export function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null;

@@ -15,6 +15,7 @@ import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 import "leaflet-routing-machine";
 
 import type { Wahllokal } from "../types/wahllokal";
+import { distKm } from "../util/distKm";
 
 export interface WahllokalMapHandle {
   focusOn(lat: number, lng: number): void;
@@ -27,25 +28,6 @@ interface Props {
   onSelectWahllokal?: (wl: Wahllokal) => void;
 }
 
-// Entfernung berechnen (Haversine)
-// TODO evtl aus util auslagern (auch in WahllokalePage.tsx genutzt)
-function distKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
   function WahllokalMap(
     { center, wahllokale, darkMode, onSelectWahllokal },
@@ -56,23 +38,34 @@ export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
     const markersRef = useRef<{ wl: Wahllokal; marker: L.Marker }[]>([]);
 
     // Icons
-    const userIcon = L.icon({
-      iconUrl: "/icons/user-marker.png",
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    });
+    const userIcon = useMemo(
+      () =>
+        L.icon({
+          iconUrl: "/navigation/user-marker.png",
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        }),
+      []
+    );
 
-    const wahllokalIcon = L.icon({
-      iconUrl: "/icons/wahllokal-marker.png",
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    });
-
-    const nearestIcon = L.icon({
-      iconUrl: "/icons/green-marker.png",
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-    });
+    const wahllokalIcon = useMemo(
+      () =>
+        L.icon({
+          iconUrl: "/navigation/wahllokal-marker.png",
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        }),
+      []
+    );
+    const nearestIcon = useMemo(
+      () =>
+        L.icon({
+          iconUrl: "/navigation/green-marker.png",
+          iconSize: [32, 32],
+          iconAnchor: [16, 32],
+        }),
+      []
+    );
 
     // Nächstgelegenes Wahllokal bestimmen
     const nearest = useMemo(() => {

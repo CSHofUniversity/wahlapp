@@ -1,7 +1,6 @@
 // src/pages/WahlterminePage.tsx
 
 import { useEffect, useMemo, useState, type JSX } from "react";
-import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Chip from "@mui/material/Chip";
@@ -9,6 +8,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
+import IconButton from "@mui/material/IconButton";
 
 import Timeline from "@mui/lab/Timeline";
 import TimelineItem from "@mui/lab/TimelineItem";
@@ -50,19 +50,23 @@ import {
 } from "../services/userTermineLocal";
 
 import { TerminEditorDialog } from "../components/TerminEditorDialog";
-import { PageHeader } from "../components/PageHeader";
-import { PageTransition } from "../components/PageTransition";
 import { Loader } from "../components/Loader";
+import { PageLayout } from "../components/PageLayout";
 
 import { parseDate } from "../util/parseDate";
-import { downloadICS } from "../util/createICS";
 import { useNotificationContext } from "../context/NotificationContext";
 import { getIcsData } from "../util/icsHelper";
-import IconButton from "@mui/material/IconButton";
+import { downloadICS } from "../util/icsDownload";
 
-type CombinedTermin =
-  | (Termin & { source: "api"; icon: JSX.Element })
-  | (UserTermin & { source: "user"; icon: JSX.Element });
+type TerminFilter = "alle" | "wahl" | "briefwahl" | "frist" | "info" | "custom";
+
+// UI-normalisierte Terminstruktur
+type CombinedTermin = (Termin | UserTermin) & {
+  source: "api" | "user";
+  icon: JSX.Element;
+  displayTitle: string;
+  displayDescription: string;
+};
 
 // PERSISTENCE KEYS
 const FILTER_KEY = "wahltermine_filter";
@@ -72,10 +76,9 @@ export default function WahlterminePage() {
   const [userTermine, setUserTermine] = useState<UserTermin[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter Load
-  const [filter, setFilter] = useState<
-    "alle" | "wahl" | "briefwahl" | "frist" | "info" | "custom"
-  >((localStorage.getItem(FILTER_KEY) as any) ?? "alle");
+  const [filter, setFilter] = useState<TerminFilter>(
+    (localStorage.getItem(FILTER_KEY) as TerminFilter) ?? "alle"
+  );
 
   // Notification state
   const [notifications, setNotifications] = useState(loadNotifications());
@@ -84,11 +87,6 @@ export default function WahlterminePage() {
   // Dialog state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<UserTermin | null>(null);
-
-  function handleCloseEditor() {
-    setEditorOpen(false);
-    setEditing(null);
-  }
 
   // --- FETCH DATA ---
   useEffect(() => {
@@ -100,7 +98,105 @@ export default function WahlterminePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // FILTER + MERGE Termine
+  // --- FILTER ändern & persistieren ---
+  const handleFilterChange = (val: TerminFilter) => {
+    setFilter(val);
+    localStorage.setItem(FILTER_KEY, val);
+  };
+
+  // --- Notification Helpers ---
+  const isRegistered = (id: string) => notifications.some((n) => n.id === id);
+
+  const getLeadTime = (id: string) =>
+    notifications.find((n) => n.id === id)?.leadMinutes ?? 1440;
+
+  const toggleNotification = (t: CombinedTermin, enabled: boolean) => {
+    const dateObj = parseDate(t.datum_iso);
+    if (!dateObj) return;
+
+    if (enabled) {
+      const entry = {
+        id: t.id,
+        dateISO: dateObj.toISOString(),
+        leadMinutes: getLeadTime(t.id) ?? 1440,
+      };
+      addNotification(entry);
+      setNotifications((prev) => {
+        const withoutOld = prev.filter((n) => n.id !== t.id);
+        return [...withoutOld, entry];
+      });
+    } else {
+      removeNotification(t.id);
+      setNotifications((prev) => prev.filter((n) => n.id !== t.id));
+    }
+    reloadNotifications();
+  };
+
+  const updateLeadTimeForTerm = (id: string, minutes: number) => {
+    updateNotification(id, minutes);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, leadMinutes: minutes } : n))
+    );
+  };
+
+  const handleClearAllNotifications = () => {
+    clearAllNotifications();
+    setNotifications([]);
+    reloadNotifications();
+  };
+
+  // --- User Termin Handling ---
+  const handleCreateTermin = () => {
+    setEditing(null);
+    setEditorOpen(true);
+  };
+
+  const handleEditUserTermin = (termin: CombinedTermin) => {
+    if (termin.source !== "user") return;
+
+    setEditing({
+      id: termin.id,
+      title: termin.title,
+      beschreibung: termin.beschreibung,
+      datum_iso: termin.datum_iso,
+      typ: termin.typ,
+    } as UserTermin);
+    setEditorOpen(true);
+  };
+
+  const handleSaveTermin = (data: {
+    title: string;
+    beschreibung: string;
+    datum_iso: string;
+  }) => {
+    if (editing) {
+      updateUserTermin(editing.id, data);
+    } else {
+      addUserTermin(data);
+    }
+
+    setUserTermine(loadUserTermine());
+    setEditorOpen(false);
+    setEditing(null);
+  };
+
+  const handleDeleteUserTermin = (id: string) => {
+    deleteUserTermin(id);
+
+    // Linked Notification entfernen
+    removeNotification(id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    reloadNotifications();
+
+    setUserTermine(loadUserTermine());
+  };
+
+  const handleCloseEditor = () => {
+    setEditorOpen(false);
+    setEditing(null);
+  };
+
+  // --- Termine kombinieren & filtern ---
   const termine = useMemo<CombinedTermin[]>(() => {
     const iconForTyp = (typ: TerminTyp) => {
       switch (typ) {
@@ -116,16 +212,23 @@ export default function WahlterminePage() {
           return <EventIcon />;
       }
     };
+
     const apiMapped: CombinedTermin[] = apiTermine.map((t) => ({
       ...t,
-      source: "api",
+      source: "api" as const,
       icon: iconForTyp(t.typ),
+      // Offizielle Termine: Beschreibung als Titel, mit Fallback
+      displayTitle: t.title ?? "Offizieller Wahltermin",
+      displayDescription: t.beschreibung ?? "",
     }));
 
     const userMapped: CombinedTermin[] = userTermine.map((t) => ({
       ...t,
-      source: "user",
+      source: "user" as const,
       icon: <EventIcon />,
+      // User-Termine: Titel/Beschreibung, mit Fallbacks
+      displayTitle: t.title ?? "Eigener Termin",
+      displayDescription: t.beschreibung ?? "",
     }));
 
     let combined = [...apiMapped, ...userMapped];
@@ -147,334 +250,298 @@ export default function WahlterminePage() {
     return combined;
   }, [apiTermine, userTermine, filter]);
 
-  const handleFilterChange = (val: typeof filter) => {
-    setFilter(val);
-    localStorage.setItem(FILTER_KEY, val);
-  };
-
-  // === Notification Helpers ===
-
-  const isRegistered = (id: string) => notifications.some((n) => n.id === id);
-
-  const getLeadTime = (id: string) =>
-    notifications.find((n) => n.id === id)?.leadMinutes ?? 1440;
-
-  const toggleNotification = (t: CombinedTermin, enabled: boolean) => {
-    const dateObj = parseDate(t.datum_iso);
-    if (!dateObj) return;
-
-    if (enabled) {
-      const entry = {
-        id: t.id,
-        dateISO: dateObj.toISOString(),
-        leadMinutes: 1440,
-      };
-      addNotification(entry);
-      setNotifications((p) => [...p, entry]);
-    } else {
-      removeNotification(t.id);
-      setNotifications((p) => p.filter((n) => n.id !== t.id));
-    }
-    reloadNotifications();
-  };
-
-  const updateLeadTimeForTerm = (id: string, minutes: number) => {
-    updateNotification(id, minutes);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leadMinutes: minutes } : n))
-    );
-  };
-
-  // === User Termin Handling ===
-  const handleCreateTermin = () => {
-    setEditing(null);
-    setEditorOpen(true);
-  };
-
-  const handleSaveTermin = (data: {
-    title: string;
-    beschreibung: string;
-    datum_iso: string;
-  }) => {
-    if (editing) {
-      updateUserTermin(editing.id, data);
-      setUserTermine(loadUserTermine());
-    } else {
-      addUserTermin(data);
-      setUserTermine(loadUserTermine());
-    }
-    setEditorOpen(false);
-  };
-
-  const handleDeleteUserTermin = (id: string) => {
-    deleteUserTermin(id);
-
-    // Linked Notification entfernen
-    removeNotification(id);
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    reloadNotifications();
-
-    setUserTermine(loadUserTermine());
-  };
-
   if (loading) return <Loader />;
 
   return (
-    <PageTransition>
-      <PageHeader
-        icon={<EventIcon />}
-        title="Wahltermine"
-        subtitle="Alle wichtigen Termine zur Kommunalwahl."
+    <PageLayout
+      icon={<EventIcon />}
+      title="Wahltermine"
+      subtitle="Alle wichtigen Termine zur Kommunalwahl."
+    >
+      <TerminFilterChips filter={filter} onFilterChange={handleFilterChange} />
+
+      {termine.length === 0 ? (
+        <Typography color="text.secondary">
+          Keine Termine für diese Auswahl.
+        </Typography>
+      ) : (
+        <TerminTimeline
+          termine={termine}
+          isRegistered={isRegistered}
+          getLeadTime={getLeadTime}
+          onToggleNotification={toggleNotification}
+          onChangeLeadTime={updateLeadTimeForTerm}
+          onEditUserTermin={handleEditUserTermin}
+          onDeleteUserTermin={handleDeleteUserTermin}
+        />
+      )}
+
+      <TerminActionsBar
+        onAddTermin={handleCreateTermin}
+        hasNotifications={notifications.length > 0}
+        onClearNotifications={handleClearAllNotifications}
       />
 
-      <Container sx={{ mt: 2, mb: 10 }}>
-        {/* Filter */}
-        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-          <Chip
-            label="Alle"
-            color={filter === "alle" ? "primary" : "default"}
-            onClick={() => handleFilterChange("alle")}
-          />
-
-          <Chip
-            label="Wahl"
-            icon={<HowToVoteIcon />}
-            color={filter === "wahl" ? "primary" : "default"}
-            onClick={() => handleFilterChange("wahl")}
-          />
-
-          <Chip
-            label="Briefwahl"
-            icon={<MailIcon />}
-            color={filter === "briefwahl" ? "info" : "default"}
-            onClick={() => handleFilterChange("briefwahl")}
-          />
-
-          <Chip
-            label="Fristen"
-            icon={<NotificationsActiveIcon />}
-            color={filter === "frist" ? "error" : "default"}
-            onClick={() => handleFilterChange("frist")}
-          />
-
-          <Chip
-            label="Info"
-            icon={<NotificationsNoneIcon />}
-            color={filter === "info" ? "success" : "default"}
-            onClick={() => handleFilterChange("info")}
-          />
-
-          <Chip
-            label="Eigene"
-            icon={<EventIcon />}
-            color={filter === "custom" ? "secondary" : "default"}
-            onClick={() => handleFilterChange("custom")}
-          />
-        </Stack>
-
-        {/* Timeline */}
-        {termine.length === 0 ? (
-          <Typography color="text.secondary">
-            Keine Termine für diese Auswahl.
-          </Typography>
-        ) : (
-          <Timeline position="alternate">
-            {termine.map((t, index) => {
-              const dateObj = parseDate(t.datum_iso);
-              const dateString = dateObj
-                ? dateObj.toLocaleDateString("de-DE", {
-                    weekday: "short",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })
-                : "Datum unbekannt";
-
-              // ICS Helper
-              const { title: icsTitle, description: icsDescription } =
-                getIcsData(t);
-
-              return (
-                <TimelineItem key={t.id}>
-                  <TimelineOppositeContent color="text.secondary">
-                    {dateString}
-                  </TimelineOppositeContent>
-
-                  <TimelineSeparator>
-                    <TimelineDot
-                      sx={{
-                        bgcolor:
-                          t.source === "user"
-                            ? "secondary.main"
-                            : t.typ === "wahl"
-                            ? "primary.main"
-                            : t.typ === "briefwahl"
-                            ? "info.main"
-                            : t.typ === "frist"
-                            ? "error.main"
-                            : t.typ === "info"
-                            ? "success.main"
-                            : "grey.500",
-                        color: "#fff",
-                      }}
-                    >
-                      {t.icon}
-                    </TimelineDot>
-                    {index < termine.length - 1 && <TimelineConnector />}
-                  </TimelineSeparator>
-
-                  <TimelineContent>
-                    <Paper sx={{ p: 2 }}>
-                      <Stack spacing={1}>
-                        {/* Titel */}
-                        <Typography variant="subtitle1" fontWeight={600}>
-                          {"title" in t ? t.title : t.title}
-                        </Typography>
-
-                        {/* Beschreibung */}
-                        <Typography variant="body2">
-                          {"beschreibung" in t
-                            ? t.beschreibung
-                            : t.beschreibung}
-                        </Typography>
-
-                        <Stack direction="row" spacing={1}>
-                          {/* ICS Export */}
-                          {dateObj && (
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() =>
-                                downloadICS({
-                                  title: icsTitle,
-                                  description: icsDescription,
-                                  start: dateObj,
-                                })
-                              }
-                            >
-                              <DownloadIcon />
-                            </IconButton>
-                          )}
-
-                          {/* Notifications */}
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
-                            <IconButton
-                              size="small"
-                              color={isRegistered(t.id) ? "primary" : "default"}
-                              onClick={() =>
-                                toggleNotification(t, !isRegistered(t.id))
-                              }
-                            >
-                              {isRegistered(t.id) ? (
-                                <NotificationsActiveIcon />
-                              ) : (
-                                <NotificationsNoneIcon />
-                              )}
-                            </IconButton>
-
-                            {isRegistered(t.id) && (
-                              <Select
-                                size="small"
-                                value={getLeadTime(t.id)}
-                                onChange={(e) =>
-                                  updateLeadTimeForTerm(
-                                    t.id,
-                                    e.target.value as number
-                                  )
-                                }
-                                sx={{ minWidth: 160 }}
-                              >
-                                <MenuItem value={30}>
-                                  30 Minuten vorher
-                                </MenuItem>
-                                <MenuItem value={60}>1 Stunde vorher</MenuItem>
-                                <MenuItem value={1440}>1 Tag vorher</MenuItem>
-                                <MenuItem value={2880}>2 Tage vorher</MenuItem>
-                                <MenuItem value={10080}>
-                                  1 Woche vorher
-                                </MenuItem>
-                              </Select>
-                            )}
-                          </Stack>
-
-                          {/* Edit + Delete nur für User Termine */}
-                          {"typ" in t && t.typ === "custom" && (
-                            <Stack direction="row" spacing={1}>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => {
-                                  if (t.source !== "user") return;
-                                  setEditing({
-                                    id: t.id,
-                                    title: t.title,
-                                    beschreibung: t.beschreibung,
-                                    datum_iso: t.datum_iso,
-                                    typ: "custom",
-                                  });
-                                  setEditorOpen(true);
-                                }}
-                              >
-                                <EditIcon />
-                              </IconButton>
-
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleDeleteUserTermin(t.id)}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Stack>
-                          )}
-                        </Stack>
-                      </Stack>
-                    </Paper>
-                  </TimelineContent>
-                </TimelineItem>
-              );
-            })}
-          </Timeline>
-        )}
-
-        {/* Termin hinzufügen + Alle Benachrichtigungen deaktivieren */}
-        <Stack direction="row-reverse" spacing={1} sx={{ mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddCircleOutlineIcon />}
-            sx={{ mb: 3 }}
-            onClick={handleCreateTermin}
-          >
-            Termin hinzufügen
-          </Button>
-
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<NotificationsOffIcon />}
-            disabled={notifications.length === 0}
-            onClick={() => {
-              clearAllNotifications();
-              setNotifications([]);
-              reloadNotifications();
-            }}
-          >
-            Alle Benachrichtigungen deaktivieren
-          </Button>
-        </Stack>
-      </Container>
-
-      {/* Dialog */}
       <TerminEditorDialog
         open={editorOpen}
         initial={editing}
         onClose={handleCloseEditor}
         onSave={handleSaveTermin}
       />
-    </PageTransition>
+    </PageLayout>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Präsentationskomponenten                                          */
+/* ------------------------------------------------------------------ */
+
+interface TerminFilterChipsProps {
+  filter: TerminFilter;
+  onFilterChange: (val: TerminFilter) => void;
+}
+
+function TerminFilterChips({ filter, onFilterChange }: TerminFilterChipsProps) {
+  return (
+    <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+      <Chip
+        label="Alle"
+        color={filter === "alle" ? "primary" : "default"}
+        onClick={() => onFilterChange("alle")}
+      />
+
+      <Chip
+        label="Wahl"
+        icon={<HowToVoteIcon />}
+        color={filter === "wahl" ? "primary" : "default"}
+        onClick={() => onFilterChange("wahl")}
+      />
+
+      <Chip
+        label="Briefwahl"
+        icon={<MailIcon />}
+        color={filter === "briefwahl" ? "info" : "default"}
+        onClick={() => onFilterChange("briefwahl")}
+      />
+
+      <Chip
+        label="Fristen"
+        icon={<NotificationsActiveIcon />}
+        color={filter === "frist" ? "error" : "default"}
+        onClick={() => onFilterChange("frist")}
+      />
+
+      <Chip
+        label="Info"
+        icon={<NotificationsNoneIcon />}
+        color={filter === "info" ? "success" : "default"}
+        onClick={() => onFilterChange("info")}
+      />
+
+      <Chip
+        label="Eigene"
+        icon={<EventIcon />}
+        color={filter === "custom" ? "secondary" : "default"}
+        onClick={() => onFilterChange("custom")}
+      />
+    </Stack>
+  );
+}
+
+interface TerminTimelineProps {
+  termine: CombinedTermin[];
+  isRegistered: (id: string) => boolean;
+  getLeadTime: (id: string) => number;
+  onToggleNotification: (termin: CombinedTermin, enabled: boolean) => void;
+  onChangeLeadTime: (id: string, minutes: number) => void;
+  onEditUserTermin: (termin: CombinedTermin) => void;
+  onDeleteUserTermin: (id: string) => void;
+}
+
+function TerminTimeline({
+  termine,
+  isRegistered,
+  getLeadTime,
+  onToggleNotification,
+  onChangeLeadTime,
+  onEditUserTermin,
+  onDeleteUserTermin,
+}: TerminTimelineProps) {
+  return (
+    <Timeline position="alternate">
+      {termine.map((t, index) => {
+        const dateObj = parseDate(t.datum_iso);
+        const dateString = dateObj
+          ? dateObj.toLocaleDateString("de-DE", {
+              weekday: "short",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+          : "Datum unbekannt";
+
+        const { title: icsTitle, description: icsDescription } = getIcsData(t);
+
+        const dotColor =
+          t.source === "user"
+            ? "secondary.main"
+            : t.typ === "wahl"
+            ? "primary.main"
+            : t.typ === "briefwahl"
+            ? "info.main"
+            : t.typ === "frist"
+            ? "error.main"
+            : t.typ === "info"
+            ? "success.main"
+            : "grey.500";
+
+        const registered = isRegistered(t.id);
+
+        return (
+          <TimelineItem key={t.id}>
+            <TimelineOppositeContent color="text.secondary">
+              {dateString}
+            </TimelineOppositeContent>
+
+            <TimelineSeparator>
+              <TimelineDot
+                sx={{
+                  bgcolor: dotColor,
+                  color: "#fff",
+                }}
+              >
+                {t.icon}
+              </TimelineDot>
+              {index < termine.length - 1 && <TimelineConnector />}
+            </TimelineSeparator>
+
+            <TimelineContent>
+              <Paper sx={{ p: 2 }}>
+                <Stack spacing={1}>
+                  {/* Titel */}
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {t.displayTitle}
+                  </Typography>
+
+                  {/* Beschreibung */}
+                  {t.displayDescription && (
+                    <Typography variant="body2">
+                      {t.displayDescription}
+                    </Typography>
+                  )}
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {/* ICS Export */}
+                    {dateObj && (
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() =>
+                          downloadICS({
+                            title: icsTitle,
+                            description: icsDescription,
+                            start: dateObj,
+                          })
+                        }
+                      >
+                        <DownloadIcon />
+                      </IconButton>
+                    )}
+
+                    {/* Notifications */}
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <IconButton
+                        size="small"
+                        color={registered ? "primary" : "default"}
+                        onClick={() => onToggleNotification(t, !registered)}
+                      >
+                        {registered ? (
+                          <NotificationsActiveIcon />
+                        ) : (
+                          <NotificationsNoneIcon />
+                        )}
+                      </IconButton>
+
+                      {registered && (
+                        <Select
+                          size="small"
+                          value={getLeadTime(t.id)}
+                          onChange={(e) =>
+                            onChangeLeadTime(t.id, e.target.value as number)
+                          }
+                          sx={{ minWidth: 160 }}
+                        >
+                          <MenuItem value={30}>30 Minuten vorher</MenuItem>
+                          <MenuItem value={60}>1 Stunde vorher</MenuItem>
+                          <MenuItem value={1440}>1 Tag vorher</MenuItem>
+                          <MenuItem value={2880}>2 Tage vorher</MenuItem>
+                          <MenuItem value={10080}>1 Woche vorher</MenuItem>
+                        </Select>
+                      )}
+                    </Stack>
+
+                    {/* Edit + Delete nur für User-Termine */}
+                    {t.source === "user" && (
+                      <Stack direction="row" spacing={1}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => onEditUserTermin(t)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => onDeleteUserTermin(t.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Stack>
+              </Paper>
+            </TimelineContent>
+          </TimelineItem>
+        );
+      })}
+    </Timeline>
+  );
+}
+
+interface TerminActionsBarProps {
+  onAddTermin: () => void;
+  hasNotifications: boolean;
+  onClearNotifications: () => void;
+}
+
+function TerminActionsBar({
+  onAddTermin,
+  hasNotifications,
+  onClearNotifications,
+}: TerminActionsBarProps) {
+  return (
+    <Stack direction="row-reverse" spacing={1}>
+      <Button
+        variant="contained"
+        startIcon={<AddCircleOutlineIcon />}
+        sx={{ mb: 3 }}
+        onClick={onAddTermin}
+      >
+        Termin hinzufügen
+      </Button>
+
+      <Button
+        variant="outlined"
+        color="error"
+        startIcon={<NotificationsOffIcon />}
+        disabled={!hasNotifications}
+        onClick={onClearNotifications}
+      >
+        Alle Benachrichtigungen deaktivieren
+      </Button>
+    </Stack>
   );
 }

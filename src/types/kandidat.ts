@@ -13,5 +13,5 @@ export interface Kandidat {
   foto_url?: string | null;
   biografie?: string;
   agenda?: string;
-  links?: Links;
+  links?: Links; // für später mehrere Link-Typen (Social Media, Webseite etc.)
 }

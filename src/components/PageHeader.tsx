@@ -1,16 +1,23 @@
 // src/components/PageHeader.tsx
 
 import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { ReactNode } from "react";
 
 interface PageHeaderProps {
   icon: ReactNode;
+  actions?: ReactNode;
   title: string;
   subtitle?: string;
 }
 
-export function PageHeader({ icon, title, subtitle }: PageHeaderProps) {
+export function PageHeader({
+  icon,
+  title,
+  actions,
+  subtitle,
+}: PageHeaderProps) {
   return (
     <Box
       sx={{
@@ -66,6 +73,7 @@ export function PageHeader({ icon, title, subtitle }: PageHeaderProps) {
           )}
         </Box>
       </Box>
+      <Stack>{actions ? <Stack direction="row">{actions}</Stack> : null}</Stack>
     </Box>
   );
 }

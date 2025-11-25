@@ -12,6 +12,8 @@ interface Props {
   format?: string;
 }
 
+// TODO evtl minDate und maxDate als Prop auslagern umd Zeitraum zu definieren.
+
 export function CustomDatePicker({
   label,
   value,
