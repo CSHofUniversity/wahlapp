@@ -1,6 +1,6 @@
 // src/components/TopBar.tsx
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -22,6 +22,7 @@ import Box from "@mui/material/Box";
 
 import { useNavigate } from "react-router-dom";
 import { useSettingsTheme } from "../hooks/useSettingsTheme";
+import { APP_NAME } from "./config/appConfig";
 
 export function TopBar() {
   const [open, setOpen] = useState(false);
@@ -29,6 +30,10 @@ export function TopBar() {
   const navigate = useNavigate();
 
   const toggleDrawer = (v: boolean) => () => setOpen(v);
+
+  useEffect(() => {
+    document.title = APP_NAME;
+  }, []);
 
   return (
     <>
@@ -47,7 +52,7 @@ export function TopBar() {
               sx={{ flexGrow: 1, fontWeight: 600, cursor: "pointer" }}
               onClick={() => navigate("/")}
             >
-              Kommunale Wahlinfo-App für den Wahlkreis Hof
+              {APP_NAME}
             </Typography>
           </Box>
 

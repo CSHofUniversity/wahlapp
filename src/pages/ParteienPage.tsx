@@ -20,24 +20,36 @@ import type { Partei } from "../types/partei";
 import { AppCardWithSideInfo } from "../components/AppCardWithSideInfo";
 import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { safeApiCall } from "../services/api";
+import { OfflineHint } from "../components/OfflineHint";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
 /* ------------------------------------------------------------------ */
 
 export default function ParteienPage() {
-  const [parteien, setParteien] = useState<Partei[]>([]);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
+  const [parteien, setParteien] = useState<Partei[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { search, sort, setSearch, setSort } = useParteiFilterState();
   const navigate = useNavigate();
 
+  const loadData = async () => {
+    setLoading(true);
+
+    const res = await safeApiCall(() => ladeParteien(), []);
+    setOffline(res.offline);
+    setParteien(res.data ?? []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    ladeParteien().then((data) => {
-      setParteien(data);
-      setLoading(false);
-    });
+    loadData();
   }, []);
 
   const filtered = useMemo(
@@ -50,12 +62,17 @@ export default function ParteienPage() {
 
   if (loading) return <Loader />;
 
+  if (offline && parteien.length === 0) {
+    return <OfflineFallback retry={loadData} />;
+  }
+
   return (
     <PageLayout
       icon={<PolicyIcon />}
       title="Parteien"
       subtitle="Eine Übersicht der aktuellen Parteien zur Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       <ParteiFilterSection
         search={search}
         sort={sort}

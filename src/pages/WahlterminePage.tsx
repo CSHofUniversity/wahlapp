@@ -57,6 +57,9 @@ import { parseDate } from "../util/parseDate";
 import { useNotificationContext } from "../context/NotificationContext";
 import { getIcsData } from "../util/icsHelper";
 import { downloadICS } from "../util/icsDownload";
+import { safeApiCall } from "../services/api";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { OfflineHint } from "../components/OfflineHint";
 
 type TerminFilter = "alle" | "wahl" | "briefwahl" | "frist" | "info" | "custom";
 
@@ -72,9 +75,11 @@ type CombinedTermin = (Termin | UserTermin) & {
 const FILTER_KEY = "wahltermine_filter";
 
 export default function WahlterminePage() {
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
   const [apiTermine, setApiTermine] = useState<Termin[]>([]);
   const [userTermine, setUserTermine] = useState<UserTermin[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [filter, setFilter] = useState<TerminFilter>(
     (localStorage.getItem(FILTER_KEY) as TerminFilter) ?? "alle"
@@ -89,13 +94,18 @@ export default function WahlterminePage() {
   const [editing, setEditing] = useState<UserTermin | null>(null);
 
   // --- FETCH DATA ---
+  const loadData = async () => {
+    setLoading(true);
+
+    const res = await safeApiCall(() => ladeWahltermine(), []);
+    setOffline(res.offline);
+    setApiTermine(res.data ?? []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    Promise.all([ladeWahltermine(), loadUserTermine()])
-      .then(([api, user]) => {
-        setApiTermine(api ?? []);
-        setUserTermine(user ?? []);
-      })
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
   // --- FILTER ändern & persistieren ---
@@ -252,12 +262,17 @@ export default function WahlterminePage() {
 
   if (loading) return <Loader />;
 
+  if (offline && apiTermine.length === 0) {
+    return <OfflineFallback retry={loadData} />;
+  }
+
   return (
     <PageLayout
       icon={<EventIcon />}
       title="Wahltermine"
       subtitle="Alle wichtigen Termine zur Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       <TerminFilterChips filter={filter} onFilterChange={handleFilterChange} />
 
       {termine.length === 0 ? (

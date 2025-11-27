@@ -32,13 +32,15 @@ import { useFavoriten, type FavoritMitDetails } from "../hooks/useFavoriten";
 import { useFavoritenContext } from "../context/FavoritenContext";
 
 import { toRawGitHub } from "../util/gitHubRaw";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { OfflineHint } from "../components/OfflineHint";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
 /* ------------------------------------------------------------------ */
 
 export default function FavoritenPage() {
-  const { favoriten, loading, remove, updateNotiz } = useFavoriten();
+  const { favoriten, loading, remove, updateNotiz, offline } = useFavoriten();
   const { reloadFavoriten } = useFavoritenContext();
 
   // Filter-Logik
@@ -66,12 +68,18 @@ export default function FavoritenPage() {
 
   if (loading) return <Loader />;
 
+  // Fallback: erster Offline-Start ohne Daten
+  if (offline && favoriten.length === 0) {
+    return <OfflineFallback retry={reloadFavoriten} />;
+  }
+
   return (
     <PageLayout
       icon={<StarIcon />}
       title="Favoriten"
       subtitle="Ihre Favoriten für die anstehende Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       {favoriten.length === 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
           Bisher noch keine Favoriten gespeichert.

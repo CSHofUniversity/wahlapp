@@ -38,9 +38,11 @@ import {
 import { toRawGitHub } from "../util/gitHubRaw";
 
 import { useFavoritenContext } from "../context/FavoritenContext";
-import { useSearchParams } from "react-router-dom";
 import type { Favorit } from "../types/favorit";
 import Divider from "@mui/material/Divider";
+import { safeApiCall } from "../services/api";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { OfflineHint } from "../components/OfflineHint";
 
 /* ------------------------------------------------------------------ */
 /*  Hauptkomponente                                                   */
@@ -48,19 +50,18 @@ import Divider from "@mui/material/Divider";
 
 export default function KandidatenPage() {
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
   const [kandidaten, setKandidaten] = useState<Kandidat[]>([]);
   const [parteien, setParteien] = useState<Partei[]>([]);
 
   const { favoriten, reloadFavoriten } = useFavoritenContext();
-  const [searchParams] = useSearchParams();
-  const initialParteiFromURL = searchParams.get("partei");
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Fehler pro Karte
-  const [cardErrors, setCardErrors] = useState<Record<string, string | null>>(
-    {}
-  );
+  type CardErrorMap = Record<string, string | null>;
+  const [cardErrors, setCardErrors] = useState<CardErrorMap>({});
 
   // Lightbox (Portrait)
   const { imageOpen, imageSrc, imageBorderColor, openImage, closeImage } =
@@ -86,20 +87,22 @@ export default function KandidatenPage() {
   });
 
   // Kandidaten + Parteien laden
-  useEffect(() => {
-    Promise.all([ladeKandidaten(), ladeParteien()])
-      .then(([kList, pList]) => {
-        const merged = mergeParteien(kList, pList);
-        setKandidaten(merged);
-        setParteien(pList);
+  const loadData = async () => {
+    setLoading(true);
 
-        // Partei aus Query param vorselektieren
-        if (initialParteiFromURL) {
-          const found = pList.find((p) => p.id === initialParteiFromURL);
-          if (found) handleSelectPartei(found);
-        }
-      })
-      .finally(() => setLoading(false));
+    const resK = await safeApiCall(() => ladeKandidaten(), []);
+    const resP = await safeApiCall(() => ladeParteien(), []);
+
+    setOffline(resK.offline || resP.offline);
+
+    setKandidaten(resK.data ?? []);
+    setParteien(resP.data ?? []);
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   // Wahlkreise (Memo)
@@ -129,12 +132,18 @@ export default function KandidatenPage() {
 
   if (loading) return <Loader />;
 
+  // Fallback: erster Offline-Start ohne Daten
+  if (offline && kandidaten.length === 0) {
+    return <OfflineFallback retry={loadData} />;
+  }
+
   return (
     <PageLayout
       icon={<PeopleIcon />}
       title="Kandidaten"
       subtitle="Eine Übersicht der Kandidaten zur Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       {/* Filter */}
       <FilterSection
         parteien={parteien}
@@ -345,17 +354,6 @@ function useKandidatenFilter() {
     handleSelectWahlkreis: setSelectedWahlkreis,
     handleToggleOnlyFavorites: setOnlyFavorites,
   };
-}
-
-function mergeParteien(kList: Kandidat[], pList: Partei[]) {
-  return kList.map((k) => {
-    const partei = pList.find((p) => p.id === k.parteiId);
-    return {
-      ...k,
-      parteiFarbe: partei?.farbe ?? "#666",
-      parteiKurz: partei?.kurz ?? "?",
-    };
-  });
 }
 
 function filterKandidaten({

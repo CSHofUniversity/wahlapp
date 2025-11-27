@@ -15,9 +15,12 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import { PageLayout } from "../components/PageLayout";
 import type { JSX } from "react";
 import Box from "@mui/material/Box";
+import { OfflineHint } from "../components/OfflineHint";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+  const offline = !navigator.onLine;
 
   return (
     <PageLayout
@@ -25,11 +28,11 @@ export default function LandingPage() {
       title="Wahl-Info"
       subtitle="Ihre kompakte Information für die Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
         Diese App unterstützt Sie bei der Suche nach Wahlinformationen,
         Briefwahl-Fristen und dem zuständigen Wahllokal.
       </Typography>
-
       <Stack spacing={2}>
         <LandingCard
           icon={<PolicyIcon fontSize="large" />}

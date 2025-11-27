@@ -1,8 +1,9 @@
 // src/data/mappers/wahllokalMapper.ts
 
+import type { WahllokalApi } from "../../types/api/wahllokalApi";
 import type { Wahllokal } from "../../types/wahllokal";
 
-export function mapWahllokal(api: any): Wahllokal {
+export function mapWahllokal(api: WahllokalApi): Wahllokal {
   // Geo parsen: POINT(lng lat)
   let geo;
   if (api.geo && typeof api.geo === "string") {

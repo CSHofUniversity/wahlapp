@@ -11,6 +11,7 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { PageLayout } from "../components/PageLayout";
 import { useSettingsTheme } from "../hooks/useSettingsTheme";
+import { OfflineHint } from "../components/OfflineHint";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
@@ -19,6 +20,7 @@ import { useSettingsTheme } from "../hooks/useSettingsTheme";
 export default function SettingsPage() {
   const { darkMode, toggleTheme } = useSettingsTheme();
   const { reloadApp } = usePwaActions();
+  const offline = !navigator.onLine;
 
   return (
     <PageLayout
@@ -26,6 +28,7 @@ export default function SettingsPage() {
       title="Einstellungen"
       subtitle="Theme, App-Informationen & PWA-Funktionen."
     >
+      {offline && <OfflineHint />}
       <Stack spacing={3}>
         {/* Darstellung */}
         <Section title="Darstellung">

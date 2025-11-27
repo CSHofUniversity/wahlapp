@@ -16,7 +16,25 @@ import { NavigationBar } from "./components/NavigationBar";
 
 import { useEffect } from "react";
 
+function useDynamicThemeColor() {
+  useEffect(() => {
+    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const setColor = () => {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (!meta) return;
+
+      meta.setAttribute("content", darkQuery.matches ? "#121212" : "#1e6fb8");
+    };
+
+    setColor();
+    darkQuery.addEventListener("change", setColor);
+    return () => darkQuery.removeEventListener("change", setColor);
+  }, []);
+}
+
 export default function App() {
+  useDynamicThemeColor();
   // Browser-Push Notifications
   useEffect(() => {
     if (Notification.permission !== "granted") {
