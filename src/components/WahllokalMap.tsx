@@ -37,6 +37,14 @@ export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
     const routingRef = useRef<L.Routing.Control | null>(null);
     const markersRef = useRef<{ wl: Wahllokal; marker: L.Marker }[]>([]);
 
+    const tileUrl = darkMode
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+    const tileAttribution = darkMode
+      ? "&copy; OpenStreetMap contributors &copy; CARTO"
+      : "&copy; OpenStreetMap contributors";
+
     // Icons
     const userIcon = useMemo(
       () =>
@@ -206,12 +214,9 @@ export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
           }}
         >
           <TileLayer
-            url={
-              darkMode
-                ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            }
-            attribution="&copy; OpenStreetMap contributors"
+            url={tileUrl}
+            attribution={tileAttribution}
+            subdomains={darkMode ? ["a", "b", "c", "d"] : undefined}
           />
 
           {/* Nutzerstandort */}

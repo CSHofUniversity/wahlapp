@@ -30,14 +30,14 @@ export default function LandingPage() {
     >
       {offline && <OfflineHint />}
       <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-        Diese App unterstützt Sie bei der Suche nach Wahlinformationen,
-        Briefwahl-Fristen und dem zuständigen Wahllokal.
+        Diese App unterstützt Sie bei der Suche nach Wahlinformationen, Fristen
+        zur Briefwahl und dem zuständigen Wahllokal.
       </Typography>
       <Stack spacing={2}>
         <LandingCard
           icon={<PolicyIcon fontSize="large" />}
           title="Parteien"
-          description="Parteien, Farben, Programme – schnell im Überblick."
+          description="Parteien & Programme – schnell im Überblick."
           bgcolor={"secondary.main"}
           onClick={() => navigate("/parteien")}
         />
