@@ -11,14 +11,23 @@ import Box from "@mui/material/Box";
 
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
+import GPSIcon from "@mui/icons-material/GpsOff";
 import UndoIcon from "@mui/icons-material/Undo";
+import MapIcon from "@mui/icons-material/Map";
 
 import { PageLayout } from "../components/PageLayout";
 import { Loader } from "../components/Loader";
 
 import { WahllokalList } from "../components/WahllokalList";
-import { useWahllokaleController } from "../hooks/useWahllokaleController";
 import { WahllokalMap } from "../components/WahllokalMap";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { useWahllokaleController } from "../hooks/useWahllokaleController";
+import { useState } from "react";
+import { OfflineHint } from "../components/OfflineHint";
+import { useCurrentPosition } from "../hooks/useCurrentPosition";
+import { SkeletonFilter } from "../components/skeletons/SkeletonFilter";
+import { SkeletonMap } from "../components/skeletons/SkeletonMap";
+import { SkeletonWahllokaleList } from "../components/skeletons/SkeletonWahllokaleList";
 
 // -------------------------------------------------------------
 // Hauptkomponente
@@ -26,22 +35,49 @@ import { WahllokalMap } from "../components/WahllokalMap";
 
 export default function WahllokalePage() {
   const {
+    offline,
     loading,
-    adresse,
-    setAdresse,
-    geoError,
-    center,
-    result,
-    sortMode,
-    mapRef,
-    darkMode,
     handleAdresseSearch,
     resetToGps,
-    handleSortChange,
+    adresse,
+    setAdresse,
+    center,
+    darkMode,
+    geoError,
     handleMapFocus,
+    handleSortChange,
+    mapRef,
+    result,
+    sortMode,
   } = useWahllokaleController();
 
-  if (loading) return <Loader />;
+  const [useGps, setUseGps] = useState(true);
+  const position = useCurrentPosition(useGps);
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<MapIcon />}
+          title="Wahllokale"
+          subtitle="Finde dein zuständiges Wahllokal."
+          loading={loading}
+          children={undefined}
+          skeleton={
+            <>
+              <Loader />
+              <SkeletonFilter />
+              <SkeletonMap />
+              <SkeletonWahllokaleList />
+            </>
+          }
+        />
+      </>
+    );
+  }
+
+  if (offline && result.length === 0) {
+    return <OfflineFallback />;
+  }
 
   return (
     <PageLayout
@@ -49,12 +85,30 @@ export default function WahllokalePage() {
       title="Wahllokale"
       subtitle="Finden Sie Ihr Wahllokal und den schnellsten Weg dorthin."
     >
+      {offline && <OfflineHint />}
       <WahllokalSearchBar
         adresse={adresse}
         onAdresseChange={(v) => setAdresse(v)}
         onSearch={handleAdresseSearch}
         onReset={resetToGps}
       />
+      {position.status === "loading" && (
+        <Alert severity="info">Standort wird ermittelt …</Alert>
+      )}
+
+      {position.status === "error" && (
+        <Alert severity="warning">
+          {position.errorMessage ??
+            "Der aktuelle Standort konnte nicht ermittelt werden."}
+        </Alert>
+      )}
+
+      {position.status === "unsupported" && (
+        <Alert severity="info">
+          GPS wird auf diesem Gerät nicht unterstützt. Die Karte zeigt einen
+          Standardbereich.
+        </Alert>
+      )}
 
       {geoError && (
         <Alert severity="error" sx={{ mb: 2 }}>
@@ -102,6 +156,14 @@ export default function WahllokalePage() {
           />
         </>
       )}
+      {/* Reset-Button setzt wieder GPS-Erkennung */}
+      <Button
+        variant="outlined"
+        startIcon={<GPSIcon />}
+        onClick={() => setUseGps(true)}
+      >
+        Auf aktuellen Standort zentrieren
+      </Button>
 
       <WahllokalList wahllokale={result} onMapFocus={handleMapFocus} />
     </PageLayout>

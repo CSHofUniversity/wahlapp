@@ -14,6 +14,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 
 import { ThemeContextProvider } from "./context/ThemeContext";
 import { BrowserRouter } from "react-router-dom";
+import OfflineBanner from "./components/OfflineBanner";
 
 function Root() {
   return (
@@ -23,6 +24,7 @@ function Root() {
       <FavoritenProvider>
         <NotificationProvider>
           <BrowserRouter>
+            <OfflineBanner />
             <App />
           </BrowserRouter>
         </NotificationProvider>
