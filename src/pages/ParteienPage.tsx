@@ -18,11 +18,13 @@ import { ladeParteien } from "../services/parteien";
 import type { Partei } from "../types/partei";
 
 import { AppCardWithSideInfo } from "../components/AppCardWithSideInfo";
-import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
 import { OfflineFallback } from "../components/OfflineFallback";
 import { safeApiCall } from "../services/api";
 import { OfflineHint } from "../components/OfflineHint";
+import { SkeletonFilter } from "../components/skeletons/SkeletonFilter";
+import { SkeletonKandidatCard } from "../components/skeletons/SkeletonKandidatCard";
+import { Loader } from "../components/Loader";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
@@ -60,10 +62,37 @@ export default function ParteienPage() {
   const toggleExpand = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<PolicyIcon />}
+          title="Kandidaten"
+          subtitle="Eine Übersicht der Kandidaten zur Kommunalwahl."
+          children={undefined}
+          loading={loading}
+          skeleton={
+            <>
+              <Loader />
+              <SkeletonFilter />
+              {[1, 2, 3].map((k) => (
+                <AppCardWithSideInfo
+                  key={k}
+                  parteiFarbe={"#666"}
+                  parteiKurz={"???"}
+                >
+                  <SkeletonKandidatCard />
+                </AppCardWithSideInfo>
+              ))}
+            </>
+          }
+        />
+      </>
+    );
+  }
 
   if (offline && parteien.length === 0) {
-    return <OfflineFallback retry={loadData} />;
+    return <OfflineFallback />;
   }
 
   return (
@@ -71,6 +100,7 @@ export default function ParteienPage() {
       icon={<PolicyIcon />}
       title="Parteien"
       subtitle="Eine Übersicht der aktuellen Parteien zur Kommunalwahl."
+      loading={loading}
     >
       {offline && <OfflineHint />}
       <ParteiFilterSection

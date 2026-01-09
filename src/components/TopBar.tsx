@@ -22,7 +22,7 @@ import Box from "@mui/material/Box";
 
 import { useNavigate } from "react-router-dom";
 import { useSettingsTheme } from "../hooks/useSettingsTheme";
-import { APP_NAME } from "./config/appConfig";
+import { APP_NAME } from "../config/appConfig";
 
 export function TopBar() {
   const [open, setOpen] = useState(false);

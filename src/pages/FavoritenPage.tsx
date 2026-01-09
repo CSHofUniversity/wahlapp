@@ -25,7 +25,6 @@ import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { AppCardWithSideInfo } from "../components/AppCardWithSideInfo";
 import { KandidatPortrait } from "../components/KandidatPortrait";
 import { ImageLightbox } from "../components/ImageLightbox";
-import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
 
 import { useFavoriten, type FavoritMitDetails } from "../hooks/useFavoriten";
@@ -34,6 +33,8 @@ import { useFavoritenContext } from "../context/FavoritenContext";
 import { toRawGitHub } from "../util/gitHubRaw";
 import { OfflineFallback } from "../components/OfflineFallback";
 import { OfflineHint } from "../components/OfflineHint";
+import { SkeletonKandidatCard } from "../components/skeletons/SkeletonKandidatCard";
+import { Loader } from "../components/Loader";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
@@ -66,11 +67,31 @@ export default function FavoritenPage() {
   const toggleExpand = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<StarIcon />}
+          title="Favoriten"
+          subtitle="Deine gespeicherten Kandidaten"
+          children={undefined}
+          loading={loading}
+          skeleton={
+            <>
+              <Loader />
+              {[1, 2, 3].map((k) => (
+                <SkeletonKandidatCard key={k} />
+              ))}
+            </>
+          }
+        />
+      </>
+    );
+  }
 
   // Fallback: erster Offline-Start ohne Daten
   if (offline && favoriten.length === 0) {
-    return <OfflineFallback retry={reloadFavoriten} />;
+    return <OfflineFallback />;
   }
 
   return (
@@ -78,6 +99,7 @@ export default function FavoritenPage() {
       icon={<StarIcon />}
       title="Favoriten"
       subtitle="Ihre Favoriten für die anstehende Kommunalwahl."
+      loading={loading}
     >
       {offline && <OfflineHint />}
       {favoriten.length === 0 && (

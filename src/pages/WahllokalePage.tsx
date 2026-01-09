@@ -13,6 +13,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
 import GPSIcon from "@mui/icons-material/GpsOff";
 import UndoIcon from "@mui/icons-material/Undo";
+import MapIcon from "@mui/icons-material/Map";
 
 import { PageLayout } from "../components/PageLayout";
 import { Loader } from "../components/Loader";
@@ -21,9 +22,12 @@ import { WahllokalList } from "../components/WahllokalList";
 import { WahllokalMap } from "../components/WahllokalMap";
 import { OfflineFallback } from "../components/OfflineFallback";
 import { useWahllokaleController } from "../hooks/useWahllokaleController";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { OfflineHint } from "../components/OfflineHint";
 import { useCurrentPosition } from "../hooks/useCurrentPosition";
+import { SkeletonFilter } from "../components/skeletons/SkeletonFilter";
+import { SkeletonMap } from "../components/skeletons/SkeletonMap";
+import { SkeletonWahllokaleList } from "../components/skeletons/SkeletonWahllokaleList";
 
 // -------------------------------------------------------------
 // Hauptkomponente
@@ -45,17 +49,36 @@ export default function WahllokalePage() {
     mapRef,
     result,
     sortMode,
-    initWithGps,
   } = useWahllokaleController();
 
   const [useGps, setUseGps] = useState(true);
   const position = useCurrentPosition(useGps);
-
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<MapIcon />}
+          title="Wahllokale"
+          subtitle="Finde dein zuständiges Wahllokal."
+          loading={loading}
+          children={undefined}
+          skeleton={
+            <>
+              <Loader />
+              <SkeletonFilter />
+              <SkeletonMap />
+              <SkeletonWahllokaleList />
+            </>
+          }
+        />
+      </>
+    );
+  }
 
   if (offline && result.length === 0) {
-    return <OfflineFallback retry={initWithGps} />;
+    return <OfflineFallback />;
   }
+
   return (
     <PageLayout
       icon={<LocationOnIcon />}

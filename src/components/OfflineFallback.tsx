@@ -1,7 +1,7 @@
-import { Box, Typography, Button, Stack } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import CloudOffIcon from "@mui/icons-material/CloudOff";
 
-export function OfflineFallback({ retry }: { retry: () => void }) {
+export function OfflineFallback() {
   return (
     <Box
       sx={{
@@ -17,9 +17,6 @@ export function OfflineFallback({ retry }: { retry: () => void }) {
       <Typography variant="body2" sx={{ mb: 3 }}>
         Du bist offline und es wurden noch keine Daten geladen.
       </Typography>
-      <Button variant="contained" onClick={retry}>
-        Erneut versuchen
-      </Button>
     </Box>
   );
 }

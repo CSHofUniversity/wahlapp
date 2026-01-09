@@ -24,7 +24,6 @@ import { ladeParteien } from "../services/parteien";
 import type { Kandidat } from "../types/kandidat";
 import type { Partei } from "../types/partei";
 
-import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
 import { AppCardWithSideInfo } from "../components/AppCardWithSideInfo";
 import { KandidatPortrait } from "../components/KandidatPortrait";
@@ -43,6 +42,9 @@ import Divider from "@mui/material/Divider";
 import { safeApiCall } from "../services/api";
 import { OfflineFallback } from "../components/OfflineFallback";
 import { OfflineHint } from "../components/OfflineHint";
+import { SkeletonFilter } from "../components/skeletons/SkeletonFilter";
+import { SkeletonKandidatCard } from "../components/skeletons/SkeletonKandidatCard";
+import { Loader } from "../components/Loader";
 
 /* ------------------------------------------------------------------ */
 /*  Hauptkomponente                                                   */
@@ -95,7 +97,18 @@ export default function KandidatenPage() {
 
     setOffline(resK.offline || resP.offline);
 
-    setKandidaten(resK.data ?? []);
+    // Kandidaten + Parteien mergen
+    const kandidatenMitPartei =
+      resK.data?.map((k) => {
+        const p = resP.data?.find((x) => x.id === k.parteiId);
+        return {
+          ...k,
+          parteiKurz: p?.kurz ?? "??",
+          parteiFarbe: p?.farbe ?? "#666",
+        };
+      }) ?? [];
+
+    setKandidaten(kandidatenMitPartei);
     setParteien(resP.data ?? []);
 
     setLoading(false);
@@ -130,11 +143,38 @@ export default function KandidatenPage() {
     favoriten,
   ]);
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<PeopleIcon />}
+          title="Kandidaten"
+          subtitle="Eine Übersicht der Kandidaten zur Kommunalwahl."
+          loading={loading}
+          children={undefined}
+          skeleton={
+            <>
+              <Loader />
+              <SkeletonFilter />
+              {[1, 2, 3].map((k) => (
+                <AppCardWithSideInfo
+                  key={k}
+                  parteiFarbe={"#666"}
+                  parteiKurz={"???"}
+                >
+                  <SkeletonKandidatCard />
+                </AppCardWithSideInfo>
+              ))}
+            </>
+          }
+        />
+      </>
+    );
+  }
 
   // Fallback: erster Offline-Start ohne Daten
   if (offline && kandidaten.length === 0) {
-    return <OfflineFallback retry={loadData} />;
+    return <OfflineFallback />;
   }
 
   return (
@@ -142,6 +182,7 @@ export default function KandidatenPage() {
       icon={<PeopleIcon />}
       title="Kandidaten"
       subtitle="Eine Übersicht der Kandidaten zur Kommunalwahl."
+      loading={loading}
     >
       {offline && <OfflineHint />}
       {/* Filter */}
