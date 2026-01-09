@@ -11,7 +11,6 @@ import Box from "@mui/material/Box";
 
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
-import GPSIcon from "@mui/icons-material/GpsOff";
 import UndoIcon from "@mui/icons-material/Undo";
 import MapIcon from "@mui/icons-material/Map";
 
@@ -51,7 +50,7 @@ export default function WahllokalePage() {
     sortMode,
   } = useWahllokaleController();
 
-  const [useGps, setUseGps] = useState(true);
+  const [useGps] = useState(true);
   const position = useCurrentPosition(useGps);
   if (loading) {
     return (
@@ -156,15 +155,6 @@ export default function WahllokalePage() {
           />
         </>
       )}
-      {/* Reset-Button setzt wieder GPS-Erkennung */}
-      <Button
-        variant="outlined"
-        startIcon={<GPSIcon />}
-        onClick={() => setUseGps(true)}
-      >
-        Auf aktuellen Standort zentrieren
-      </Button>
-
       <WahllokalList wahllokale={result} onMapFocus={handleMapFocus} />
     </PageLayout>
   );
