@@ -14,6 +14,7 @@ import { ladeKandidaten } from "../services/kandidaten";
 import { ladeParteien } from "../services/parteien";
 
 import { useFavoritenContext } from "../context/FavoritenContext";
+import { safeApiCall } from "../services/api";
 
 export interface FavoritMitDetails extends Kandidat {
   notiz?: string;
@@ -25,41 +26,66 @@ export interface FavoritMitDetails extends Kandidat {
 export function useFavoriten() {
   const [favoriten, setFavoriten] = useState<FavoritMitDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
 
   const { reloadFavoriten } = useFavoritenContext();
 
   const reload = useCallback(async () => {
     setLoading(true);
 
-    // 1️⃣ Kandidaten & Parteien laden
-    const kandidaten = await ladeKandidaten();
-    const parteien = await ladeParteien();
+    try {
+      // -----------------------------
+      // Kandidaten laden
+      // -----------------------------
+      const resK = await safeApiCall(() => ladeKandidaten(), []);
+      const kandidaten = resK.data ?? [];
+      const offlineK = resK.offline;
 
-    // 2️⃣ Favorit-Einträge + Kandidaten zusammenführen
-    const rawFavs = await loadFavoritenDetails(kandidaten);
+      // -----------------------------
+      // Parteien laden
+      // -----------------------------
+      const resP = await safeApiCall(() => ladeParteien(), []);
+      const parteien = resP.data ?? [];
+      const offlineP = resP.offline;
 
-    // 3️⃣ Parteien-Metadaten mit Favoriten mergen
-    const merged: FavoritMitDetails[] = rawFavs.map((f) => {
-      const partei = parteien.find((p) => p.id === f.parteiId);
+      // Merke Offline-Status
+      setOffline(offlineK || offlineP);
 
-      return {
-        ...f,
-        parteiFarbe: partei?.farbe ?? "#666",
-        parteiKurz: partei?.kurz ?? "?",
-        parteiName: partei?.name ?? f.parteiName ?? "",
-      };
-    });
+      // -----------------------------
+      // Favoriten + Kandidaten mergen
+      // loadFavoritenDetails erwartet ein ARRAY → korrekt!
+      // -----------------------------
+      const rawFavs = await loadFavoritenDetails(kandidaten);
 
-    setFavoriten(merged);
-    setLoading(false);
+      // -----------------------------
+      // Parteien zu Favoriten mergen
+      // -----------------------------
+      const merged: FavoritMitDetails[] = rawFavs.map((f) => {
+        const partei = parteien.find((p) => p.id === f.parteiId);
+
+        return {
+          ...f,
+          parteiFarbe: partei?.farbe ?? "#666",
+          parteiKurz: partei?.kurz ?? "?",
+          parteiName: partei?.name ?? f.parteiName ?? "",
+        };
+      });
+
+      setFavoriten(merged);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Laden beim ersten Mount
+  // Initial laden
   useEffect(() => {
     reloadFavoriten();
     reload();
   }, [reload]);
 
+  // -----------------------------
+  // CRUD: add
+  // -----------------------------
   const add = useCallback(
     async (k: Kandidat) => {
       await addFavorit(k);
@@ -69,6 +95,9 @@ export function useFavoriten() {
     [reload]
   );
 
+  // -----------------------------
+  // CRUD: remove
+  // -----------------------------
   const remove = useCallback(
     async (id: string) => {
       await deleteFavorit(id);
@@ -78,6 +107,9 @@ export function useFavoriten() {
     [reload]
   );
 
+  // -----------------------------
+  // CRUD: update Notiz
+  // -----------------------------
   const updateNotiz = useCallback(
     async (id: string, text: string) => {
       await updateFavorit(id, { notiz: text });
@@ -90,6 +122,7 @@ export function useFavoriten() {
   return {
     favoriten,
     loading,
+    offline,
     add,
     remove,
     updateNotiz,

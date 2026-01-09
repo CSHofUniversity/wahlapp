@@ -28,6 +28,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 import HowToVoteIcon from "@mui/icons-material/HowToVote";
 import MailIcon from "@mui/icons-material/Mail";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
 import { ladeWahltermine } from "../services/wahltermine";
@@ -50,13 +51,17 @@ import {
 } from "../services/userTermineLocal";
 
 import { TerminEditorDialog } from "../components/TerminEditorDialog";
-import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
 
 import { parseDate } from "../util/parseDate";
 import { useNotificationContext } from "../context/NotificationContext";
 import { getIcsData } from "../util/icsHelper";
 import { downloadICS } from "../util/icsDownload";
+import { safeApiCall } from "../services/api";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { OfflineHint } from "../components/OfflineHint";
+import Skeleton from "@mui/material/Skeleton";
+import { Loader } from "../components/Loader";
 
 type TerminFilter = "alle" | "wahl" | "briefwahl" | "frist" | "info" | "custom";
 
@@ -72,9 +77,11 @@ type CombinedTermin = (Termin | UserTermin) & {
 const FILTER_KEY = "wahltermine_filter";
 
 export default function WahlterminePage() {
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
   const [apiTermine, setApiTermine] = useState<Termin[]>([]);
   const [userTermine, setUserTermine] = useState<UserTermin[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [filter, setFilter] = useState<TerminFilter>(
     (localStorage.getItem(FILTER_KEY) as TerminFilter) ?? "alle"
@@ -89,13 +96,39 @@ export default function WahlterminePage() {
   const [editing, setEditing] = useState<UserTermin | null>(null);
 
   // --- FETCH DATA ---
+  const loadData = async () => {
+    setLoading(true);
+
+    const res = await safeApiCall(() => ladeWahltermine(), []);
+    setOffline(res.offline);
+    setApiTermine(res.data ?? []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    Promise.all([ladeWahltermine(), loadUserTermine()])
-      .then(([api, user]) => {
-        setApiTermine(api ?? []);
-        setUserTermine(user ?? []);
-      })
-      .finally(() => setLoading(false));
+    loadData();
+  }, []);
+
+  // initiales bereiningen von "alten" Notifications
+  useEffect(() => {
+    const now = Date.now();
+
+    const stale = notifications.filter((n) => {
+      const d = new Date(n.dateISO);
+      return !Number.isNaN(d.getTime()) && d.getTime() < now;
+    });
+
+    if (stale.length === 0) return;
+    stale.forEach((n) => removeNotification(n.id));
+
+    // UI-State bereinigen
+    setNotifications((prev) =>
+      prev.filter((n) => !stale.some((s) => s.id === n.id))
+    );
+    reloadNotifications();
+
+    // Keine Dependencys im array um Re-Render Loop zu verhindern
   }, []);
 
   // --- FILTER ändern & persistieren ---
@@ -113,6 +146,15 @@ export default function WahlterminePage() {
   const toggleNotification = (t: CombinedTermin, enabled: boolean) => {
     const dateObj = parseDate(t.datum_iso);
     if (!dateObj) return;
+
+    // Termine in der Vergangenheit: niemals aktivieren; falls noch aktiv -> entfernen
+    const isPast = dateObj.getTime() < Date.now();
+    if (isPast) {
+      removeNotification(t.id);
+      setNotifications((prev) => prev.filter((n) => n.id !== t.id));
+      reloadNotifications();
+      return;
+    }
 
     if (enabled) {
       const entry = {
@@ -250,7 +292,35 @@ export default function WahlterminePage() {
     return combined;
   }, [apiTermine, userTermine, filter]);
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<CalendarMonthIcon />}
+          title="Wahltermine"
+          subtitle="Alle wichtigen Termine rund um die Kommunalwahl"
+          children={undefined}
+          loading={loading}
+          skeleton={
+            <>
+              <Loader />
+              {[1, 2, 3].map((_k) => (
+                <Skeleton
+                  variant="rectangular"
+                  height={80}
+                  sx={{ borderRadius: 2 }}
+                />
+              ))}
+            </>
+          }
+        />
+      </>
+    );
+  }
+
+  if (offline && apiTermine.length === 0) {
+    return <OfflineFallback />;
+  }
 
   return (
     <PageLayout
@@ -258,6 +328,7 @@ export default function WahlterminePage() {
       title="Wahltermine"
       subtitle="Alle wichtigen Termine zur Kommunalwahl."
     >
+      {offline && <OfflineHint />}
       <TerminFilterChips filter={filter} onFilterChange={handleFilterChange} />
 
       {termine.length === 0 ? (
@@ -397,6 +468,9 @@ function TerminTimeline({
 
         const registered = isRegistered(t.id);
 
+        const isPast = !!dateObj && dateObj.getTime() < Date.now();
+        const notificationDisabled = isPast;
+
         return (
           <TimelineItem key={t.id}>
             <TimelineOppositeContent color="text.secondary">
@@ -453,16 +527,19 @@ function TerminTimeline({
                       <IconButton
                         size="small"
                         color={registered ? "primary" : "default"}
+                        disabled={notificationDisabled}
                         onClick={() => onToggleNotification(t, !registered)}
                       >
-                        {registered ? (
+                        {notificationDisabled ? (
+                          <NotificationsOffIcon />
+                        ) : registered ? (
                           <NotificationsActiveIcon />
                         ) : (
                           <NotificationsNoneIcon />
                         )}
                       </IconButton>
 
-                      {registered && (
+                      {registered && !notificationDisabled && (
                         <Select
                           size="small"
                           value={getLeadTime(t.id)}

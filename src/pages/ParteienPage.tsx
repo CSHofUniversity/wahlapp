@@ -18,26 +18,40 @@ import { ladeParteien } from "../services/parteien";
 import type { Partei } from "../types/partei";
 
 import { AppCardWithSideInfo } from "../components/AppCardWithSideInfo";
-import { Loader } from "../components/Loader";
 import { PageLayout } from "../components/PageLayout";
+import { OfflineFallback } from "../components/OfflineFallback";
+import { safeApiCall } from "../services/api";
+import { OfflineHint } from "../components/OfflineHint";
+import { SkeletonFilter } from "../components/skeletons/SkeletonFilter";
+import { SkeletonKandidatCard } from "../components/skeletons/SkeletonKandidatCard";
+import { Loader } from "../components/Loader";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
 /* ------------------------------------------------------------------ */
 
 export default function ParteienPage() {
-  const [parteien, setParteien] = useState<Partei[]>([]);
   const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
+  const [parteien, setParteien] = useState<Partei[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { search, sort, setSearch, setSort } = useParteiFilterState();
   const navigate = useNavigate();
 
+  const loadData = async () => {
+    setLoading(true);
+
+    const res = await safeApiCall(() => ladeParteien(), []);
+    setOffline(res.offline);
+    setParteien(res.data ?? []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    ladeParteien().then((data) => {
-      setParteien(data);
-      setLoading(false);
-    });
+    loadData();
   }, []);
 
   const filtered = useMemo(
@@ -48,14 +62,47 @@ export default function ParteienPage() {
   const toggleExpand = (id: string) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  if (loading) return <Loader />;
+  if (loading) {
+    return (
+      <>
+        <PageLayout
+          icon={<PolicyIcon />}
+          title="Kandidaten"
+          subtitle="Eine Übersicht der Kandidaten zur Kommunalwahl."
+          children={undefined}
+          loading={loading}
+          skeleton={
+            <>
+              <Loader />
+              <SkeletonFilter />
+              {[1, 2, 3].map((k) => (
+                <AppCardWithSideInfo
+                  key={k}
+                  parteiFarbe={"#666"}
+                  parteiKurz={"???"}
+                >
+                  <SkeletonKandidatCard />
+                </AppCardWithSideInfo>
+              ))}
+            </>
+          }
+        />
+      </>
+    );
+  }
+
+  if (offline && parteien.length === 0) {
+    return <OfflineFallback />;
+  }
 
   return (
     <PageLayout
       icon={<PolicyIcon />}
       title="Parteien"
       subtitle="Eine Übersicht der aktuellen Parteien zur Kommunalwahl."
+      loading={loading}
     >
+      {offline && <OfflineHint />}
       <ParteiFilterSection
         search={search}
         sort={sort}

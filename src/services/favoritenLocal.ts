@@ -1,7 +1,7 @@
 // services/favoritenLocal.ts
 import type { Kandidat } from "../types/kandidat";
 
-const STORAGE_KEY = "favoriten2";
+const STORAGE_KEY = "favoriten";
 
 export interface FavoritEntry {
   id: string;

@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 
 import { PageTransition } from "./PageTransition";
 import { PageHeader } from "./PageHeader";
+import { Loader } from "./Loader";
 
 interface PageLayoutProps {
   title: string;
@@ -12,6 +13,9 @@ interface PageLayoutProps {
   icon?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
+  skeleton?: React.ReactNode;
+  // TODO loading anpassen, wie wird der Wert gesteuert?
+  loading?: boolean;
 }
 
 export function PageLayout({
@@ -20,6 +24,8 @@ export function PageLayout({
   icon,
   actions,
   children,
+  skeleton,
+  loading,
 }: PageLayoutProps) {
   return (
     <PageTransition>
@@ -31,7 +37,10 @@ export function PageLayout({
       />
 
       <Container sx={{ mt: 2, mb: 10 }}>
-        <Stack spacing={2}>{children}</Stack>
+        <Stack spacing={2}>
+          {/* Skeleton-Mode */}
+          {loading ? skeleton ?? <Loader /> : children}
+        </Stack>
       </Container>
     </PageTransition>
   );
