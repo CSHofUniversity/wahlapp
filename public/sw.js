@@ -1,5 +1,5 @@
 // --------------------------
-// Wahl-Info PWA Service Worker
+// Wahlinfo PWA Service Worker
 // --------------------------
 
 const CACHE_VERSION = "v3.0.0";

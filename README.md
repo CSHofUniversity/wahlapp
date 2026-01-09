@@ -1,6 +1,6 @@
-# Wahl-Info & Wahllokalfinder (PWA)
+# Wahlinfo & Wahllokalfinder (PWA)
 
-Eine Progressive Web App (PWA) zur kommunalen Wahl-Information für den Wahlkreis Hof.  
+Eine Progressive Web App (PWA) zur kommunalen Wahlinformation für den Wahlkreis Hof.  
 Die App bietet kompakte Infos zu Parteien, Kandidaten, Wahllokalen und wichtigen Wahlterminen – inkl. Favoritenverwaltung, persönlichen Wahlterminen und Erinnerungsfunktionen.
 
 ## Features

@@ -25,7 +25,7 @@ export default function LandingPage() {
   return (
     <PageLayout
       icon={<ThumbUpIcon />}
-      title="Wahl-Info"
+      title="Wahlinfo"
       subtitle="Ihre kompakte Information für die Kommunalwahl."
     >
       {offline && <OfflineHint />}

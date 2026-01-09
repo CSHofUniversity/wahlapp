@@ -42,7 +42,7 @@ export default function SettingsPage() {
 
         {/* App-Infos */}
         <Section title="App-Informationen">
-          <Typography>Wahl-Info & Wahllokalfinder</Typography>
+          <Typography>Wahlinfo & Wahllokalfinder</Typography>
           <Typography>Version: 1.0.0</Typography>
         </Section>
 

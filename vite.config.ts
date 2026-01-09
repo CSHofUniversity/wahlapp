@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["vite.svg"],
       manifest: {
-        name: "Wahl-Info & Wahllokalfinder",
-        short_name: "Wahl-Info",
+        name: "Wahlinfo & Wahllokalfinder",
+        short_name: "Wahlinfo",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
