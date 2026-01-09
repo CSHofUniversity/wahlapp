@@ -73,7 +73,9 @@ const FILTER_KEY = "wahltermine_filter";
 
 export default function WahlterminePage() {
   const [apiTermine, setApiTermine] = useState<Termin[]>([]);
-  const [userTermine, setUserTermine] = useState<UserTermin[]>([]);
+  const [userTermine, setUserTermine] = useState<UserTermin[]>(() =>
+    loadUserTermine()
+  );
   const [loading, setLoading] = useState(true);
 
   const [filter, setFilter] = useState<TerminFilter>(
@@ -88,12 +90,11 @@ export default function WahlterminePage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<UserTermin | null>(null);
 
-  // --- FETCH DATA ---
+  // --- FETCH DATA für API Termine ---
   useEffect(() => {
-    Promise.all([ladeWahltermine(), loadUserTermine()])
-      .then(([api, user]) => {
+    ladeWahltermine()
+      .then((api) => {
         setApiTermine(api ?? []);
-        setUserTermine(user ?? []);
       })
       .finally(() => setLoading(false));
   }, []);

@@ -32,6 +32,7 @@ import { useFavoriten, type FavoritMitDetails } from "../hooks/useFavoriten";
 import { useFavoritenContext } from "../context/FavoritenContext";
 
 import { toRawGitHub } from "../util/gitHubRaw";
+import Divider from "@mui/material/Divider";
 
 /* ------------------------------------------------------------------ */
 /* Hauptkomponente                                                    */
@@ -245,6 +246,26 @@ function FavoritCard({
 
       <Collapse in={expanded}>
         <Stack spacing={1} sx={{ mt: 1 }}>
+          <Typography variant="subtitle1" color="text.secondary">
+            Wahlkreis: {fav.wahlkreis}
+          </Typography>
+
+          <Typography variant="h6" color="text.secondary">
+            Biografie
+          </Typography>
+          <Typography variant="body1">{fav.biografie}</Typography>
+
+          <Divider />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 1 }}>
+            Agenda
+          </Typography>
+          <Typography variant="body1">{fav.agenda}</Typography>
+
+          <Divider />
+          <Typography variant="h6" color="text.secondary" sx={{ mt: 1 }}>
+            Ihre Notizen
+          </Typography>
+
           <Typography variant="body2" color="text.secondary">
             {fav.notiz?.trim() ? fav.notiz : "Keine Notiz hinterlegt."}
           </Typography>

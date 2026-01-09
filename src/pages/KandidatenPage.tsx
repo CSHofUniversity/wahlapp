@@ -55,6 +55,8 @@ export default function KandidatenPage() {
   const [searchParams] = useSearchParams();
   const initialParteiFromURL = searchParams.get("partei");
 
+  console.log(initialParteiFromURL);
+
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Fehler pro Karte
