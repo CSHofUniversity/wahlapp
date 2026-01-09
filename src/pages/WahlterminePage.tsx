@@ -98,12 +98,18 @@ export default function WahlterminePage() {
   const [editing, setEditing] = useState<UserTermin | null>(null);
 
   // --- FETCH DATA für API Termine ---
+  const loadData = async () => {
+    setLoading(true);
+
+    const res = await safeApiCall(() => ladeWahltermine(), []);
+    setOffline(res.offline);
+    setApiTermine(res.data ?? []);
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    ladeWahltermine()
-      .then((api) => {
-        setApiTermine(api ?? []);
-      })
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
   // initiales bereiningen von "alten" Notifications
