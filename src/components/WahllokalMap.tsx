@@ -39,6 +39,8 @@ export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
       ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
+    const subdomains = darkMode ? ["a", "b", "c", "d"] : ["a", "b", "c"];
+
     const tileAttribution = darkMode
       ? "&copy; OpenStreetMap contributors &copy; CARTO"
       : "&copy; OpenStreetMap contributors";
@@ -212,9 +214,10 @@ export const WahllokalMap = forwardRef<WahllokalMapHandle, Props>(
           }}
         >
           <TileLayer
+            key={darkMode ? "tiles-dark" : "tiles-light"} // erzwingt Remount bei Wechsel
             url={tileUrl}
             attribution={tileAttribution}
-            subdomains={darkMode ? ["a", "b", "c", "d"] : undefined}
+            subdomains={subdomains}
           />
 
           {/* Nutzerstandort */}
